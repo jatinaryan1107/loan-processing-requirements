@@ -1,0 +1,12 @@
+Synthetic workshop notes for the loan-processing software project
+
+The application shall let an authenticated loan officer submit a loan application with required fields: application identifier, applicant reference and requested amount.
+The eligibility rules engine shall return a reason code when an application fails an institution-defined eligibility rule.
+The system shall require a second authorised reviewer before an approval decision is recorded.
+The system shall record an immutable audit event with actor, action, application identifier and UTC timestamp for every approval decision.
+The application shall respond quickly.
+The system shall retain application audit records for 30 days.
+The system shall retain application audit records for 90 days.
+The repayment integration shall display the status returned by the institution's existing servicing API.
+The application shall comply with all applicable RBI regulations.
+

@@ -1,0 +1,7 @@
+The system shall reject an application submission when the applicant reference is missing and show the message Applicant reference is required.
+The system shall require authentication before a loan officer can open an application record.
+The system shall deny access to approval actions when the authenticated role is Software Developer.
+The system shall record an audit event containing actor identifier, event type and UTC timestamp for each approval action.
+The system shall collect only the fields listed in the approved application schema and reject additional fields.
+The system shall mask account identifiers in application logs, showing only the final four characters.
+The system shall return a timeout error when the legacy servicing API does not respond within 10 seconds.
