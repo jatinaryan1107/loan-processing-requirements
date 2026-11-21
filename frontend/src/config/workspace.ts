@@ -44,42 +44,35 @@ export const navigation: {
   id: View;
   title: string;
   icon: typeof Layers3;
-  caption: string;
 }[] = [
   {
     id: "overview",
     title: "Overview",
     icon: FolderKanban,
-    caption: "Your project at a glance",
   },
   {
     id: "gather",
     title: "Gather requirements",
     icon: MessageSquareText,
-    caption: "Capture context. Keep the source.",
   },
   {
     id: "analyse",
     title: "Analyse & validate",
     icon: ListChecks,
-    caption: "Turn intent into testable requirements",
   },
   {
     id: "compliance",
     title: "Compliance review",
     icon: ShieldCheck,
-    caption: "Evidence before interpretation",
   },
   {
     id: "sdlc",
     title: "SDLC recommendation",
     icon: GitBranch,
-    caption: "A lifecycle that fits your project",
   },
   {
     id: "export",
     title: "Documents & audit",
     icon: FileCheck2,
-    caption: "From decisions to deliverables",
   },
 ];

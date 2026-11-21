@@ -6,7 +6,7 @@ import {
   FileText,
   MessageSquareText,
   Plus,
-  Sparkles,
+  ListChecks,
   Upload,
 } from "lucide-react";
 import type { Project, Role, Mutate } from "../types";
@@ -68,7 +68,7 @@ export function Gather({
       {role === "ba" ? (
         <div className="gather-grid">
           <Panel
-            title="Start with the stakeholder’s words"
+            title="Stakeholder input"
             description="Paste a requirement, interview note or project document."
           >
             <form onSubmit={addSource}>
@@ -114,10 +114,7 @@ export function Gather({
               </div>
             </form>
           </Panel>
-          <Panel
-            title="Bring your documents"
-            description="Text-based PDF, Word or plain text."
-          >
+          <Panel title="Import a document">
             <form className="upload-form" onSubmit={uploadFile}>
               <label className="upload-zone">
                 <Upload size={27} />
@@ -157,7 +154,7 @@ export function Gather({
       <section className="analysis-banner">
         <div>
           <span className="analysis-icon">
-            <Sparkles size={23} />
+            <ListChecks size={23} />
           </span>
           <div>
             <h3>From source text to structured drafts</h3>
@@ -192,7 +189,7 @@ export function Gather({
                 )
               }
             >
-              <Sparkles size={16} />
+              <ListChecks size={16} />
               Run analysis
             </button>
           </div>

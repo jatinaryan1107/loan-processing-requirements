@@ -1,13 +1,6 @@
-import {
-  ArrowRight,
-  Check,
-  GitBranch,
-  Loader2,
-  MessageSquareText,
-  ShieldCheck,
-} from "lucide-react";
+import { ArrowRight, Check, Loader2 } from "lucide-react";
 import type { Role } from "../types";
-import { Badge, Brand } from "../components/ui";
+import { Brand } from "../components/ui";
 import { roles } from "../config/workspace";
 
 export function Login({
@@ -24,46 +17,21 @@ export function Login({
   login: (role: Role) => Promise<void>;
 }) {
   return (
-    <div className="login-shell">
-      <div className="login-story">
+    <div className="signin">
+      <header className="signin-masthead">
         <Brand />
-        <div>
-          <span className="eyebrow light">REQUIREMENTS, WITH CONTEXT</span>
-          <h1>
-            Build the right
-            <br />
-            system from
-            <br />
-            <em>the first question.</em>
-          </h1>
+        <span>Local demo</span>
+      </header>
+      <main className="signin-layout">
+        <div className="signin-intro">
+          <h1>Loan processing requirements</h1>
           <p>
-            A shared workspace for defining loan-processing software, reviewing
-            evidence and choosing a development lifecycle.
+            Review stakeholder requirements, check policy evidence and select a
+            development lifecycle for the proposed loan system.
           </p>
-          <div className="story-path">
-            <span>
-              <MessageSquareText />
-              Gather
-            </span>
-            <i />
-            <span>
-              <ShieldCheck />
-              Review
-            </span>
-            <i />
-            <span>
-              <GitBranch />
-              Plan
-            </span>
-          </div>
         </div>
-        <small>AI-Based Loan Processing Requirements Management</small>
-      </div>
-      <div className="login-form">
-        <div className="login-form-inner">
-          <Badge tone="teal">LOCAL DEMO</Badge>
-          <h2>Your workspace awaits.</h2>
-          <p>Choose a seeded role to explore its review responsibilities.</p>
+        <section className="role-picker" aria-labelledby="role-title">
+          <h2 id="role-title">Choose your role</h2>
           <div className="role-options">
             {roles.map((r) => (
               <button
@@ -72,7 +40,9 @@ export function Login({
                 onClick={() => setLoginRole(r.id)}
                 aria-pressed={loginRole === r.id}
               >
-                <span className="avatar">{r.initials}</span>
+                <span className="avatar" aria-hidden="true">
+                  {r.initials}
+                </span>
                 <span>
                   <strong>{r.name}</strong>
                   <small>{r.description}</small>
@@ -99,13 +69,11 @@ export function Login({
               </>
             )}
           </button>
-          <p className="login-disclaimer">
-            Demo identities have server-enforced permissions. This local login
-            is for demonstration and is not production authentication. Use
-            synthetic information only.
+          <p className="signin-note">
+            Demo roles use synthetic data and require no password.
           </p>
-        </div>
-      </div>
+        </section>
+      </main>
     </div>
   );
 }

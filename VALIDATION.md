@@ -1,6 +1,6 @@
 # Validation results
 
-Verified on 20 November 2026 on Windows with Python 3.13.9 and Node.js 24.14.1. The application was run with synthetic input and without an LLM key.
+Verified on 21 November 2026 on Windows with Python 3.13.9 and Node.js 24.14.1. The application was run with synthetic input and without an LLM key.
 
 ## Automated checks
 
@@ -19,18 +19,18 @@ One upstream warning remains: the installed Starlette TestClient deprecates its 
 
 ## Live browser workflow
 
-The built frontend and FastAPI were served together at `http://127.0.0.1:8000`. A headless Chrome walkthrough performed the following real UI actions:
+The walkthrough used the production frontend and FastAPI on a separate localhost port with a fresh SQLite database. A headless Chrome walkthrough performed the following real UI actions:
 
 1. Opened the seeded project as Business Analyst and inspected its quality findings.
-2. Created a synthetic project, entered a source and ran analysis.
-3. Opened the extracted requirement and approved it with a review note.
+2. Created a synthetic project, edited its context, entered a source and ran analysis.
+3. Opened the extracted requirement and approved it with a review note, then read the saved decision in the expanded requirement.
 4. Ran compliance verification and switched to Compliance Officer.
 5. Confirmed approval was disabled for all six unsupported mappings; rejected each with a missing-evidence explanation.
 6. Switched to Project Manager, ranked the lifecycle models, reviewed the resulting workflow and approved the selection.
 7. Downloaded the approved Markdown SRS and checked its baseline label, traceability and missing-evidence dispositions.
 8. Switched to Software Developer and confirmed the approved requirement was visible while editing and approval actions were unavailable.
 
-**Result: passed, with zero browser runtime errors.** Screenshots of the observed interface are in `docs/screenshots/`. A separate browser regression held old load and mutation responses across a role switch and verified that they could not overwrite the new role's project. The mobile layout was inspected at 390 pixels wide and had no horizontal overflow or overlapping cards.
+**Result: passed, with zero browser runtime errors.** Screenshots of the observed interface are in `docs/screenshots/`. A separate browser regression held old load and mutation responses across a role switch and verified that they could not overwrite the new role's project. At 390 pixels wide, the role picker and all six workspace screens passed the horizontal overflow check. The login and overview were also inspected visually.
 
 ## Scope of the result
 

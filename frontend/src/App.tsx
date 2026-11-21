@@ -55,7 +55,6 @@ export default function App() {
       </a>
       <aside className="sidebar">
         <Brand />
-        <div className="workspace-label">WORKSPACE</div>
         <label className="project-select-label" htmlFor="project-select">
           Current project
         </label>
@@ -85,7 +84,7 @@ export default function App() {
           </button>
         )}
         <nav aria-label="Project workflow">
-          {navigation.map((item, i) => (
+          {navigation.map((item) => (
             <button
               key={item.id}
               className={view === item.id ? "active" : ""}
@@ -94,7 +93,6 @@ export default function App() {
             >
               <item.icon size={19} />
               <span>{item.title}</span>
-              <small>{String(i + 1).padStart(2, "0")}</small>
             </button>
           ))}
         </nav>
@@ -102,15 +100,18 @@ export default function App() {
           <div className="mode-note">
             <span className="status-dot" />
             <div>
-              <strong>Deterministic demo</strong>
-              <small>Local rules · Human review</small>
+              <strong>Local demo</strong>
+              <small>
+                {llmAvailable
+                  ? "Model extraction available"
+                  : "Rule-based analysis"}
+              </small>
             </div>
           </div>
           <div className="user-row">
             <span className="avatar">{roleInfo.initials}</span>
             <div>
               <strong>{session.user.name}</strong>
-              <small>{roleInfo.name}</small>
             </div>
             <button
               className="icon-button"
@@ -124,41 +125,22 @@ export default function App() {
         </div>
       </aside>
       <div className="main-shell">
-        <header className="topbar">
-          <div>
-            <span className="breadcrumb">Financial systems</span>
-            <span className="breadcrumb-slash">/</span>
-            <strong>Loan processing</strong>
-          </div>
-          <div className="topbar-right">
-            <Badge tone="neutral">DEMO WORKSPACE</Badge>
-            <span className="topbar-date">
-              {new Date().toLocaleDateString(undefined, {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })}
-            </span>
-          </div>
-        </header>
         <main id="main-content">
           <div className="page-heading">
             <div>
-              <span className="eyebrow">
-                {view === "overview"
-                  ? "PROJECT WORKSPACE"
-                  : `STEP ${navigation.findIndex((n) => n.id === view)} / ${project?.name || "YOUR PROJECT"}`}
-              </span>
-              <h1>{activeNav.title}</h1>
-              <p>{activeNav.caption}</p>
+              {project && (
+                <p className="project-location">
+                  {view === "overview" ? "Project overview" : project.name}
+                </p>
+              )}
+              <h1>
+                {view === "overview" && project
+                  ? project.name
+                  : activeNav.title}
+              </h1>
             </div>
-            {project && (
-              <div className="heading-meta">
-                <Badge tone={project.synthetic ? "amber" : "neutral"}>
-                  {project.synthetic ? "Synthetic demo project" : "Project"}
-                </Badge>
-                <span>{project.jurisdiction || "Jurisdiction not set"}</span>
-              </div>
+            {project?.synthetic && (
+              <Badge tone="amber">Synthetic project</Badge>
             )}
           </div>
           {error && (
@@ -262,10 +244,6 @@ export default function App() {
               </>
             )}
           </div>
-          <footer className="page-footer">
-            <span>Loan Processing Requirements</span>
-            <span>Advisory analysis. Accountable human decisions.</span>
-          </footer>
         </main>
       </div>
       {createOpen && (

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
 import { Check, CircleHelp, Layers3 } from "lucide-react";
+import { formatDate, label } from "../lib/format";
 
 export function Badge({
   children,
@@ -67,9 +68,27 @@ export function History({ records }: { records: Record<string, unknown>[] }) {
     records.length > 0 && (
       <details className="history">
         <summary>Decision history · {records.length}</summary>
-        {records.map((record, i) => (
-          <pre key={i}>{JSON.stringify(record, null, 2)}</pre>
-        ))}
+        {[...records]
+          .reverse()
+          .map(({ decision, actor, at, note, ...evidence }, i) => (
+            <div className="history-entry" key={i}>
+              <strong>
+                {typeof decision === "string" ? label(decision) : "Review"}
+              </strong>
+              <p>{String(note ?? "")}</p>
+              <small>
+                {[actor, typeof at === "string" && formatDate(at)]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </small>
+              {Object.keys(evidence).length > 0 && (
+                <details>
+                  <summary>Recorded details</summary>
+                  <pre>{JSON.stringify(evidence, null, 2)}</pre>
+                </details>
+              )}
+            </div>
+          ))}
       </details>
     )
   );
@@ -102,12 +121,14 @@ export function DecisionForm({
   children?: ReactNode;
 }) {
   const [note, setNote] = useState("");
-  const [decision, setDecision] = useState("approved");
   return (
     <form
       className="decision-form"
       onSubmit={async (e) => {
         e.preventDefault();
+        const button = (e.nativeEvent as SubmitEvent).submitter;
+        if (!(button instanceof HTMLButtonElement) || button.disabled) return;
+        const decision = button.value;
         if (await onDecision(decision, note)) setNote("");
       }}
     >
@@ -129,7 +150,7 @@ export function DecisionForm({
           className="button primary small"
           type="submit"
           disabled={disabled || approveDisabled}
-          onClick={() => setDecision("approved")}
+          value="approved"
         >
           <Check size={15} />
           Approve
@@ -138,7 +159,7 @@ export function DecisionForm({
           className="button danger small"
           type="submit"
           disabled={disabled}
-          onClick={() => setDecision("rejected")}
+          value="rejected"
         >
           Reject
         </button>

@@ -7,7 +7,7 @@ import {
   CircleHelp,
   FileText,
   Search,
-  Sparkles,
+  ListChecks,
 } from "lucide-react";
 import type { Project, Requirement, Role, Mutate } from "../types";
 import { label } from "../lib/format";
@@ -49,7 +49,6 @@ export function Analyse({
             Requirement register{" "}
             <span className="count">{project.requirements.length}</span>
           </h2>
-          <p>Drafts become a baseline through explicit human review.</p>
         </div>
         {role === "ba" && (
           <button
@@ -59,7 +58,7 @@ export function Analyse({
               mutate("/analyse", {}, "POST", "Quality checks refreshed.")
             }
           >
-            <Sparkles size={16} />
+            <ListChecks size={16} />
             Refresh analysis
           </button>
         )}
@@ -118,7 +117,7 @@ export function Analyse({
       <div className="requirement-list">
         {filtered.map((r) => (
           <RequirementCard
-            key={`${r.id}-${r.updated_at}`}
+            key={r.id}
             requirement={r}
             project={project}
             role={role}
@@ -233,7 +232,7 @@ function RequirementCard({
       {expanded && (
         <div className="requirement-detail">
           {editing ? (
-            <form onSubmit={edit}>
+            <form key={r.updated_at} onSubmit={edit}>
               <label>
                 Requirement statement
                 <textarea
