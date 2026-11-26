@@ -34,7 +34,7 @@ The walkthrough used the production frontend and FastAPI on a separate localhost
 
 ## Scope of the result
 
-The four mandatory capabilities work end to end as a local advisory MVP. These checks do not establish analysis accuracy on unseen banking documents or legal compliance. No live external model request was made. Rich DOCX/PDF output, OCR, enterprise identity, encryption at rest, semantic retrieval, formal multi-party adoption approval and the original brief's empirical research evaluation remain deferred; see the README and requirements traceability document.
+The four mandatory capabilities work end to end as a local advisory MVP. These checks do not establish analysis accuracy on unseen banking documents or legal compliance. Rich DOCX/PDF output, OCR, enterprise identity, encryption at rest, semantic retrieval, formal multi-party adoption approval and the original brief's empirical research evaluation remain deferred; see the README and requirements traceability document.
 
 The final export records a reviewed requirements baseline. Rejection of an unsupported compliance mapping preserves an unresolved evidence limitation; it does not waive a legal obligation or approve production deployment.
 
@@ -42,6 +42,11 @@ The final export records a reviewed requirements baseline. Rejection of an unsup
 
 The follow-up review split application composition, API routes, request schemas, authentication, project services and ingestion into separate modules. The frontend now separates screens, shared components, transport and session state. Additional regression tests cover stale-tab rejection, concurrent snapshot commits, server-side logout, excluded-source recovery, changed/expired knowledge evidence, strict provider endpoints, bounded model responses and approved-only final baselines. The live four-role workflow was rerun after these changes and passed with no runtime errors.
 
-SQLite project aggregates remain a deliberate local-MVP choice. Enterprise identity, tenant isolation, process-isolated untrusted file parsing and live provider verification remain outside this iteration.
+SQLite project aggregates remain a deliberate local-MVP choice. Enterprise identity, tenant isolation, and process-isolated untrusted file parsing remain outside this iteration.
 
 Project context edits use the same role and revision checks as requirement edits. Regression cases cover renames that preserve evidence, jurisdiction changes that invalidate derived reviews, stale updates, and the distinction between a second reviewer and a response-time target.
+
+
+## Live model extraction, 26 November 2026
+
+A browser session opened the Business Analyst workspace, added one synthetic workshop note about reasons for application status changes and an undefined history response time, selected **Use configured LLM (masked input)** and ran analysis. OpenRouter returned a completion from `nvidia/nemotron-3.5-super-vl:free` via `openrouter/free`. The application stored two drafts and one model clarification question. Both evidence quotes occurred verbatim in the input. The test checked the provider completion ID and the served model in the extraction record, then opened **Documents & audit** and verified the provider column. This verifies a single real provider exchange. The regression suite continues to use mocked model responses.

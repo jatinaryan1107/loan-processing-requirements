@@ -179,7 +179,9 @@ export function Gather({
             </label>
             <button
               className="button primary"
-              disabled={busy || !project.sources.length}
+              disabled={
+                busy || !project.sources.length || (useLlm && !unanswered)
+              }
               onClick={() =>
                 mutate(
                   "/analyse",

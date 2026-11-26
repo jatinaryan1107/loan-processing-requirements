@@ -60,7 +60,13 @@ def test_masked_input_and_literal_evidence_validation(monkeypatch):
             }
         )
         return httpx.Response(
-            200, request=httpx.Request("POST", args[0]), json={"choices": [{"message": {"content": content}}]}
+            200,
+            request=httpx.Request("POST", args[0]),
+            json={
+                "id": "test-completion",
+                "model": "served-model",
+                "choices": [{"message": {"content": content}}],
+            },
         )
 
     mock_stream(monkeypatch, response)
@@ -71,6 +77,7 @@ def test_masked_input_and_literal_evidence_validation(monkeypatch):
     assert "Synthetic Person" not in outgoing
     assert "UNTRUSTED" in outgoing
     assert meta["model"] == "test-model"
+    assert meta["response_model"] == "served-model" and meta["response_id"] == "test-completion"
 
 
 @pytest.mark.parametrize(

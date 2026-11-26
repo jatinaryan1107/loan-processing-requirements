@@ -160,12 +160,22 @@ def extract(text):
         result = Extraction.model_validate_json(content)
         if any(item.evidence not in masked for item in result.requirements):
             raise ValueError("Model output quoted evidence absent from the input.")
-        return result, {
+        metadata = {
             "provider": base,
             "model": os.environ["LLM_MODEL"],
             "system_prompt": SYSTEM_PROMPT,
             "masked_input": masked,
         }
+        # Routers may serve a different model for each request.
+        for field in ("model", "id"):
+            value = envelope.get(field)
+            if isinstance(value, str) and 0 < len(value) <= 256 and value.isprintable():
+                metadata["response_" + field] = value
+        return result, metadata
+    except httpx.HTTPStatusError as exc:
+        raise ValueError(
+            f"Model provider returned HTTP {exc.response.status_code}. No model requirements were saved."
+        ) from exc
     except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError) as exc:
         raise ValueError(
             "The model request failed or returned invalid evidence/JSON. No model requirements were saved. Retry or use deterministic analysis."

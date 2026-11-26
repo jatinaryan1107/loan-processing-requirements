@@ -154,6 +154,8 @@ def analyse(project_id: str, body: AnalyseInput, current=Depends(allowed("ba")))
     if body.use_llm:
         if not llm.enabled():
             raise HTTPException(400, "LLM mode needs a configured key, model and both explicit opt-in flags.")
+        if not pending:
+            raise HTTPException(422, "Add an unanalysed source to run model extraction.")
         try:
             for source in pending:
                 model_results[source["id"]] = llm.extract(source["text"])
@@ -198,7 +200,7 @@ def analyse(project_id: str, body: AnalyseInput, current=Depends(allowed("ba")))
                     f"Validated {len(result.requirements)} model drafts and exact evidence quotes.",
                     0.65,
                     [source["id"]],
-                    metadata["provider"] + "/" + metadata["model"],
+                    metadata["provider"] + "/" + metadata.get("response_model", metadata["model"]),
                 )
                 project["runs"][-1]["prompt_record"] = metadata
                 for question in result.questions:
