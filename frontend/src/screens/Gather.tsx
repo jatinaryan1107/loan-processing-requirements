@@ -158,9 +158,14 @@ export function Gather({
           </span>
           <div>
             <h3>From source text to structured drafts</h3>
-            <p>
-              {unanswered} unanalysed source{unanswered === 1 ? "" : "s"} ·
-              Extraction, classification and quality checks
+            <p className="analysis-progress" role="status">
+              {unanswered
+                ? `${unanswered} source${unanswered === 1 ? "" : "s"} ready for analysis.`
+                : project.sources.some(
+                      (source) => source.extracted && !source.excluded,
+                    )
+                  ? "Analysis up to date. See drafts in Analyse & validate."
+                  : "Add a source to start analysis."}
             </p>
           </div>
         </div>
