@@ -4,6 +4,7 @@ import copy
 
 import pytest
 
+from backend.agents import compliance_agent
 from backend import rules, storage
 
 
@@ -228,7 +229,7 @@ def local_policy(project):
 )
 def test_inapplicable_or_incomplete_policy_is_excluded(project, local_policy, change, monkeypatch):
     local_policy.update(change)
-    monkeypatch.setattr(rules, "load_policies", lambda: [local_policy])
+    monkeypatch.setattr(compliance_agent, "load_policies", lambda: [local_policy])
     add_requirements(project, "The system shall authenticate staff before opening records.")
     rules.compliance(project)
     assert all(m["source"] is None for m in project["mappings"])
@@ -237,7 +238,7 @@ def test_inapplicable_or_incomplete_policy_is_excluded(project, local_policy, ch
 def test_explicit_approved_local_source_can_be_retrieved_without_legal_conclusion(
     project, local_policy, monkeypatch
 ):
-    monkeypatch.setattr(rules, "load_policies", lambda: [local_policy])
+    monkeypatch.setattr(compliance_agent, "load_policies", lambda: [local_policy])
     add_requirements(project, "The system shall authenticate staff before opening restricted records.")
     rules.compliance(project)
     mapped = next(m for m in project["mappings"] if m["source"])

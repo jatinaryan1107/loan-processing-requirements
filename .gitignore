@@ -9,6 +9,7 @@ references/*PROMPT.md
 *.db-shm
 *.db-wal
 data/
+policy_vectors/
 node_modules/
 dist/
 *.tsbuildinfo

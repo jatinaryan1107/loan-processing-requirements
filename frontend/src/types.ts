@@ -73,6 +73,11 @@ export interface PolicySource {
   synthetic: boolean;
 }
 export interface Mapping {
+  matches?: {
+    requirement_id: string;
+    keywords: string[];
+    cosine_distance: number | null;
+  }[];
   id: string;
   requirement_ids: string[];
   control: string;

@@ -124,6 +124,31 @@ function MappingCard({
       </p>
       {m.source ? (
         <div className="policy-source">
+          {!!m.matches?.length && (
+            <details>
+              <summary>How these requirements matched</summary>
+              <ul>
+                {m.matches.map((match) => (
+                  <li key={match.requirement_id}>
+                    <strong>{match.requirement_id}</strong>
+                    {" · "}
+                    {[
+                      match.keywords.length
+                        ? "Keywords: " + match.keywords.join(", ")
+                        : "",
+                      match.cosine_distance !== null
+                        ? "ChromaDB cosine distance " +
+                          match.cosine_distance.toFixed(3) +
+                          " (lower is closer)"
+                        : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
           <div className="policy-title">
             <FileText size={17} />
             <strong>{m.source.title}</strong>
@@ -176,7 +201,7 @@ function MappingCard({
         <DecisionForm
           title="Compliance officer review"
           disabled={busy}
-          approveDisabled={!m.source}
+          approveDisabled={!m.source || !m.requirement_ids.length}
           onDecision={(decision, note) =>
             mutate(
               `/mappings/${m.id}/review`,

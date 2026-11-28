@@ -34,7 +34,7 @@ if ! .venv/bin/python -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) 
   echo 'Python 3.11 or newer is required. Recreate the virtual environment with a supported Python version.' >&2
   exit 1
 fi
-if ! .venv/bin/python -c 'import fastapi, uvicorn, dotenv, multipart, docx, pypdf, httpx'; then
+if ! .venv/bin/python -c 'import chromadb, fastapi, uvicorn, dotenv, multipart, docx, pypdf, httpx'; then
   echo 'Python dependencies are incomplete. Run: .venv/bin/python -m pip install -r requirements-lock.txt' >&2
   exit 1
 fi

@@ -6,13 +6,14 @@ The application does not process loans, perform KYC, approve credit, move money 
 
 ## Run locally
 
-Requirements: Python 3.11 or later, Node.js 20.19+ or 22.12+, and npm. Run the following once from the repository directory. Internet access is needed to install dependencies; the default application then runs locally.
+Requirements: Python 3.11 or later, Node.js 20.19+ or 22.12+, and npm. Run the following once from the repository directory. Setup downloads the Python and frontend dependencies and a 79 MiB embedding model. Once cached, local analysis and policy search work offline. OpenRouter is used only when model-assisted extraction is selected.
 
 ### Windows PowerShell
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements-lock.txt
+.\.venv\Scripts\python.exe -m backend.retrieval
 if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 cd frontend
 npm.cmd ci
@@ -26,6 +27,7 @@ cd ..
 ```sh
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements-lock.txt
+.venv/bin/python -m backend.retrieval
 [ -f .env ] || cp .env.example .env
 cd frontend
 npm ci
@@ -44,7 +46,7 @@ For live frontend updates, run the backend on port 8000 with `.\start.ps1` or `s
 
 The SQLite database is created on first startup at `data/requirements.db`; an empty database receives a synthetic demo project. Projects persist across restarts. Stop the server before backing up the database and its `-wal`/`-shm` companions if present. Startup preserves `.env` and existing data. Databases, secrets and dependency folders are excluded from Git.
 
-`requirements-lock.txt` records the exact Python dependency versions used for validation. `requirements.txt` lists the direct dependency constraints for deliberate upgrades; rerun the checks after updating either dependency set. The frontend lockfile records its tested dependency resolution.
+`requirements-lock.txt` pins the application dependencies and ChromaDB version used for validation. `requirements.txt` lists the direct dependency constraints for deliberate upgrades; rerun the checks after updating either dependency set. The frontend lockfile records its tested dependency resolution.
 
 ## Demo identities
 
@@ -100,9 +102,11 @@ FastAPI application (app.py) and HTTP adapters (routes.py)
         +-- schemas.py / auth.py: input validation and role checks
         +-- services.py: project operations, revision checks and safe views
         +-- ingestion.py: TXT, DOCX and PDF extraction in worker threads
-        +-- rules.py: extraction, quality, compliance, SDLC
+        +-- agents/: coordinator, extraction, classification, quality, clarification,
+        |           risk, compliance, SDLC and documentation
+        +-- rules.py: final export gates
+        +-- retrieval.py: local MiniLM embeddings and persistent ChromaDB search
         +-- llm.py: optional provider boundary
-        +-- exports.py: Markdown and JSON artefacts
         +-- storage.py: persistent SQLite project aggregates
 ```
 
@@ -114,9 +118,25 @@ Compliance reviews record a knowledge-base fingerprint and applicability snapsho
 
 Each project retains original sources, stable requirement IDs, source links, review history, clarification answers, policy mapping snapshots, lifecycle decisions, audit entries and named agent runs. Logical agents have narrow responsibilities inside one process; the prototype does not claim a distributed autonomous agent platform.
 
+### Follow a request in the backend
+
+The screen calls an endpoint in `backend/routes.py`. The implementation of each stage is in `backend/agents/`.
+
+| Agent file | Function to open | Observable result |
+| --- | --- | --- |
+| `coordinator_agent.py` | `analyse_pending` | Processes the pending sources and runs the downstream checks on one project revision. |
+| `extraction_agent.py` | `extract_source`, `make_requirement` | Creates drafts with source IDs and evidence. For live extraction the route calls `backend/llm.py: extract` to obtain and validate the model response first. |
+| `classification_agent.py` | `classify` | Assigns type and categories in rules mode. Model-assisted drafts retain their validated model classifications. |
+| `risk_agent.py` | `rate`, `assess` | A security, privacy or compliance category triggers high review risk. Other requirements receive medium risk. |
+| `quality_agent.py` | `quality` | Flags vague terms, duplicated statements, conflicting values and gaps, with links to the affected requirements. |
+| `clarification_agent.py` | `prepare` | Turns findings into questions, retains prior answers and tracks changes in the evidence. |
+| `compliance_agent.py` | `policy_applicable`, `compliance` | Filters eligible sources, calls `backend/retrieval.py`, and saves source-backed proposals for officer review. |
+| `sdlc_agent.py` | `recommend`, `workflow` | Ranks model profiles, records each factor contribution and produces lifecycle phases for PM review. |
+| `documentation_agent.py` | `payload`, `markdown` | Builds a draft or approved specification from stored records after the route checks the caller and export gates. |
+
 To bound local processing, each project accepts at most 100 sources, 1,000,000 source characters in total and 500 extracted requirements. Deterministic extraction accepts at most 150 candidate statements in one source. Exceeding an extraction limit stops the operation without saving a partial batch; split larger inputs into scoped projects or smaller documents. DOCX expanded contents are limited to 20 MB and 1,000 archive entries.
 
-The local knowledge base in `backend/knowledge/policies.json` contains an explicitly synthetic policy for demonstrating evidence handling. It is not an RBI, privacy, KYC or security-standard dataset. Synthetic clauses apply only to the seeded synthetic project. A non-synthetic entry additionally requires an `approved_by` record, an explicit `applicable_project_ids` allowlist and a jurisdiction matching the project. Complete citation metadata, an effective date that has arrived, and any expiry date are checked before retrieval. These are local metadata checks, not independent verification of source authority or reviewer identity. Adding approved source material requires careful versioning and qualified review. Retrieval and coverage checks are lexical/rule-based; semantic retrieval and a regulatory update service are deferred.
+The local knowledge base in `backend/knowledge/policies.json` contains an explicitly synthetic policy for demonstrating evidence handling. It is not an RBI, privacy, KYC or security-standard dataset. Synthetic clauses apply only to the seeded synthetic project. A non-synthetic entry additionally requires an `approved_by` record, an explicit `applicable_project_ids` allowlist and a jurisdiction matching the project. Complete citation metadata, an effective date that has arrived, and any expiry date are checked before retrieval. These are local metadata checks, not independent verification of source authority or reviewer identity. Adding approved source material requires careful versioning and qualified review. Running Compliance queries a local ChromaDB index of eligible clause texts with 384-dimensional MiniLM embeddings. For each requirement the two nearest clauses are considered. A cosine distance of 0.40 or less or a matching policy keyword proposes a link. Expand **How these requirements matched** to see the actual distance and matched terms. An officer reviews the exact clause and decides whether it covers the requirement. The initial demo snapshot uses keywords so first startup does not wait on the model. A live verification replaces that snapshot. The index lives in `policy_vectors/` beside the project database.
 
 ### How the SDLC ranking works
 
@@ -134,7 +154,7 @@ The baseline has a fixed target profile for each model. For each of nine factors
 | Testing obligations | Light verification needs | Extensive verification needs |
 | Delivery cadence | Infrequent releases | Frequent delivery |
 
-The Agile / V-Model hybrid is included when regulatory criticality and expected change are both at least 4. This condition gives the hybrid a concrete justification: evolving work with formal verification needs. Profiles and thresholds are inspectable in `backend/rules.py`; they are design choices for the prototype and need expert evaluation.
+The Agile / V-Model hybrid is included when regulatory criticality and expected change are both at least 4. This condition gives the hybrid a concrete justification: evolving work with formal verification needs. Profiles and thresholds are inspectable in `backend/agents/sdlc_agent.py`; they are design choices for the prototype and need expert evaluation.
 
 See [API contract](docs/API_CONTRACT.md), [UML](docs/UML.md), [requirements traceability](docs/REQUIREMENTS_TRACEABILITY.md) and [evaluation plan](docs/EVALUATION.md).
 

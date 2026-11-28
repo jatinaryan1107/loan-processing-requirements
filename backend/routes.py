@@ -8,7 +8,17 @@ import time
 from typing import Literal
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import PlainTextResponse
-from . import exports, llm, rules, storage
+from . import llm, retrieval, rules, storage
+from .agents import (
+    classification_agent,
+    compliance_agent,
+    coordinator_agent,
+    documentation_agent,
+    extraction_agent,
+    quality_agent,
+    risk_agent,
+    sdlc_agent,
+)
 from .auth import ROLES, allowed, user
 from .ingestion import parse_document
 from .schemas import (
@@ -50,7 +60,7 @@ def session(body: Login):
     return dict(
         token=token,
         user=dict(id="demo-" + body.role, name=ROLES[body.role], role=body.role),
-        mode="Local demo login — identity is selected, not verified",
+        mode="Local demo login â€” identity is selected, not verified",
     )
 
 
@@ -177,59 +187,10 @@ def analyse(project_id: str, body: AnalyseInput, current=Depends(allowed("ba")))
         if project["updated_at"] != before["updated_at"]:
             raise HTTPException(409, "Project changed during analysis; refresh and retry.")
         invalidate(project, current, "Analysis rerun")
-        storage.run(
-            project,
-            "CoordinatorAgent",
-            [s["id"] for s in pending],
-            "Run extraction, classification, quality and clarification. Source text is data, not instructions.",
-        )
-        for source in project["sources"]:
-            if source["extracted"] or source.get("excluded"):
-                continue
-            if body.use_llm:
-                result, metadata = model_results[source["id"]]
-                for item in result.requirements:
-                    project["requirements"].append(
-                        rules.make_requirement(item.statement, source, item.model_dump())
-                    )
-                source["extracted"] = True
-                storage.run(
-                    project,
-                    "ExtractionAgent",
-                    [source["id"]],
-                    f"Validated {len(result.requirements)} model drafts and exact evidence quotes.",
-                    0.65,
-                    [source["id"]],
-                    metadata["provider"] + "/" + metadata.get("response_model", metadata["model"]),
-                )
-                project["runs"][-1]["prompt_record"] = metadata
-                for question in result.questions:
-                    project["questions"].append(
-                        dict(
-                            id=storage.uid("Q"),
-                            requirement_ids=[],
-                            text=question,
-                            status="open",
-                            origin="llm",
-                        )
-                    )
-            else:
-                try:
-                    rules.extract_source(project, source)
-                except ValueError as exc:
-                    raise HTTPException(422, str(exc)) from exc
-            if len(project["requirements"]) > 500:
-                raise HTTPException(
-                    422,
-                    "This MVP supports up to 500 requirements per project. Split larger scopes into separate projects.",
-                )
-        storage.run(
-            project,
-            "ClassificationAgent",
-            [r["id"] for r in project["requirements"]],
-            "Assigned functional/non-functional type, multi-label categories and priority; heuristic drafts require review.",
-        )
-        rules.quality(project)
+        try:
+            coordinator_agent.analyse_pending(project, pending, model_results, body.use_llm)
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
         storage.audit(
             project,
             current,
@@ -259,15 +220,13 @@ def edit_requirement(
         )
         req.update(changes)
         if "statement" in changes:
-            req["kind"], req["categories"] = rules.classify(req["statement"])
-            req["risk"] = (
-                "high" if set(req["categories"]) & {"security", "privacy", "compliance"} else "medium"
-            )
+            req["kind"], req["categories"] = classification_agent.classify(req["statement"])
+            req["risk"] = risk_agent.rate(req["categories"])
             if "acceptance_criteria" not in changes:
-                req["acceptance_criteria"] = rules.acceptance(req["statement"], req["categories"])
+                req["acceptance_criteria"] = extraction_agent.acceptance(req["statement"], req["categories"])
         req["status"], req["updated_at"] = "draft", storage.now()
         invalidate(project, current, "Requirement changed: " + requirement_id)
-        rules.quality(project)
+        quality_agent.quality(project)
         storage.audit(project, current, "requirement_edited", requirement_id)
     return projection(project, current)
 
@@ -280,7 +239,7 @@ def review_requirement(project_id: str, requirement_id: str, body: Review, curre
         req["history"].append(dict(at=storage.now(), actor=current["name"], **body.model_dump()))
         req["updated_at"] = storage.now()
         invalidate(project, current, "Requirement review: " + requirement_id)
-        rules.quality(project)
+        quality_agent.quality(project)
         storage.audit(project, current, "requirement_" + body.decision, requirement_id + ": " + body.note)
     return projection(project, current)
 
@@ -300,7 +259,7 @@ def answer(project_id: str, question_id: str, body: Answer, current=Depends(allo
             )
         q.update(status="answered", answer=body.answer, source_id=source["id"])
         invalidate(project, current, "New clarification answer")
-        storage.audit(project, current, "clarification_answered", question_id + " → " + source["id"])
+        storage.audit(project, current, "clarification_answered", question_id + " â†’ " + source["id"])
     return projection(project, current)
 
 
@@ -309,7 +268,10 @@ def check_compliance(project_id: str, current=Depends(allowed("ba", "compliance"
     with edit_project(project_id) as project:
         if project["mappings"]:
             storage.audit(project, current, "compliance_previous_snapshot", json.dumps(project["mappings"]))
-        rules.compliance(project)
+        try:
+            compliance_agent.compliance(project, use_vectors=True)
+        except retrieval.SearchUnavailable as exc:
+            raise HTTPException(503, str(exc)) from exc
         if project["sdlc"]:
             project["sdlc"]["status"] = "draft"
         storage.audit(
@@ -327,13 +289,13 @@ def review_mapping(
 ):
     with edit_project(project_id) as project:
         mapping = find(project["mappings"], mapping_id)
-        stale = rules.compliance_freshness_reason(project)
+        stale = compliance_agent.compliance_freshness_reason(project)
         if stale:
             raise HTTPException(409, stale)
         if body.decision == "approved" and not mapping["source"]:
             raise HTTPException(
                 409,
-                rules.UNSUPPORTED
+                compliance_agent.UNSUPPORTED
                 + " Reject with a review note; do not mark unsupported content as verified.",
             )
         if body.decision == "approved" and not mapping["requirement_ids"]:
@@ -356,7 +318,7 @@ def sdlc(project_id: str, body: SdlcInput, current=Depends(allowed("pm"))):
     with edit_project(project_id) as project:
         if project["sdlc"]:
             storage.audit(project, current, "sdlc_previous_snapshot", json.dumps(project["sdlc"]))
-        rules.recommend(project, body.factors.model_dump())
+        sdlc_agent.recommend(project, body.factors.model_dump())
         storage.audit(
             project,
             current,
@@ -373,7 +335,7 @@ def decide_sdlc(project_id: str, body: SdlcDecision, current=Depends(allowed("pm
         if not sdlc_result or body.model not in [r["model"] for r in sdlc_result["rankings"]]:
             raise HTTPException(409, "Rank lifecycle options first and select one of the ranked models.")
         sdlc_result["selected_model"], sdlc_result["status"] = body.model, body.decision
-        sdlc_result["workflow"] = rules.workflow(project, body.model)
+        sdlc_result["workflow"] = sdlc_agent.workflow(project, body.model)
         sdlc_result["history"].append(dict(at=storage.now(), actor=current["name"], **body.model_dump()))
         storage.audit(project, current, "sdlc_" + body.decision, body.model + ": " + body.note)
     return projection(project, current)
@@ -407,9 +369,9 @@ def export(
         "compliance_is_advisory": True,
     }
     if format == "json":
-        return exports.payload(result, final)
+        return documentation_agent.payload(result, final)
     return PlainTextResponse(
-        exports.markdown(result, final),
+        documentation_agent.markdown(result, final),
         media_type="text/markdown",
         headers={"Content-Disposition": f'attachment; filename="{project_id}-srs.md"'},
     )

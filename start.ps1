@@ -17,7 +17,7 @@ try {
     if ($LASTEXITCODE -ne 0) {
         throw 'Python 3.11 or newer is required. Recreate the virtual environment with a supported Python version.'
     }
-    & $pythonPath -c 'import fastapi, uvicorn, dotenv, multipart, docx, pypdf, httpx'
+    & $pythonPath -c 'import chromadb, fastapi, uvicorn, dotenv, multipart, docx, pypdf, httpx'
     if ($LASTEXITCODE -ne 0) {
         throw 'Python dependencies are incomplete. Run: .\.venv\Scripts\python.exe -m pip install -r requirements-lock.txt'
     }

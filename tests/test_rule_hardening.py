@@ -5,6 +5,7 @@ from datetime import date
 
 import pytest
 
+from backend.agents import compliance_agent
 from backend import exports, rules, storage
 
 
@@ -47,7 +48,7 @@ def test_unchanged_evidence_remains_usable_after_human_review(project):
 def test_changed_knowledge_content_blocks_previous_baseline(project, monkeypatch, field, value):
     policies = copy.deepcopy(rules.load_policies())
     policies[0][field] = value
-    monkeypatch.setattr(rules, "load_policies", lambda: policies)
+    monkeypatch.setattr(compliance_agent, "load_policies", lambda: policies)
     assert any("Knowledge-base content" in reason for reason in rules.blockers(project))
     rules.compliance(project)
     assert rules.compliance_freshness_reason(project) is None
@@ -67,12 +68,12 @@ def test_same_corpus_becomes_stale_when_source_expires(project, monkeypatch):
 
     policies = copy.deepcopy(rules.load_policies())
     policies[0]["expires_on"] = "2030-01-11"
-    monkeypatch.setattr(rules, "load_policies", lambda: policies)
-    monkeypatch.setattr(rules, "date", Today)
+    monkeypatch.setattr(compliance_agent, "load_policies", lambda: policies)
+    monkeypatch.setattr(compliance_agent, "date", Today)
     rules.compliance(project)
     digest_before = project["compliance_snapshot"]["corpus_sha256"]
     assert rules.compliance_freshness_reason(project) is None
-    monkeypatch.setattr(rules, "date", Later)
+    monkeypatch.setattr(compliance_agent, "date", Later)
     assert rules.knowledge_snapshot(project, policies)["corpus_sha256"] == digest_before
     assert "applicability has changed" in rules.compliance_freshness_reason(project)
 
@@ -80,7 +81,7 @@ def test_same_corpus_becomes_stale_when_source_expires(project, monkeypatch):
 def test_policy_that_becomes_effective_requires_new_review(project, monkeypatch):
     policies = copy.deepcopy(rules.load_policies())
     policies[0]["effective_date"] = "2030-02-01"
-    monkeypatch.setattr(rules, "load_policies", lambda: policies)
+    monkeypatch.setattr(compliance_agent, "load_policies", lambda: policies)
 
     class Clock(date):
         value = date(2030, 1, 1)
@@ -89,7 +90,7 @@ def test_policy_that_becomes_effective_requires_new_review(project, monkeypatch)
         def today(cls):
             return cls.value
 
-    monkeypatch.setattr(rules, "date", Clock)
+    monkeypatch.setattr(compliance_agent, "date", Clock)
     rules.compliance(project)
     Clock.value = date(2030, 2, 1)
     assert rules.compliance_freshness_reason(project)
@@ -104,7 +105,7 @@ def test_unreadable_knowledge_base_blocks_final_without_crashing(project, monkey
     def unreadable():
         raise OSError("File not found")
 
-    monkeypatch.setattr(rules, "load_policies", unreadable)
+    monkeypatch.setattr(compliance_agent, "load_policies", unreadable)
     assert any("unavailable or invalid" in reason for reason in rules.blockers(project))
 
 

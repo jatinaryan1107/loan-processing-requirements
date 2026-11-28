@@ -1,5 +1,6 @@
 """Small SQLite repository. An atomic transaction serializes project mutations."""
 
+import hashlib
 import json
 import os
 import sqlite3
@@ -114,3 +115,9 @@ def new_project(name, description, jurisdiction, synthetic=False):
         runs=[],
         mode="deterministic demo",
     )
+
+
+def digest(value):
+    return hashlib.sha256(
+        json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    ).hexdigest()
